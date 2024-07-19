@@ -4,17 +4,17 @@ from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 import os
 
-# Hücre boyutları ve fotoğraf boyutları
+# Cell dimensions and image dimensions
 cell_width_mm = 182
 cell_height_mm = 91
 image_width_px = 2888
 image_height_px = 1476
 
-# Piksel başına düşen milimetre cinsinden ölçüleri hesapla
+# Calculate the measurements in millimeters per pixel
 px_per_mm_width = image_width_px / cell_width_mm
 px_per_mm_height = image_height_px / cell_height_mm
 
-# Global değişkenler
+# Global variables
 drawing = False
 x_init, y_init = -1, -1
 top_left_pt, bottom_right_pt = (-1, -1), (-1, -1)
@@ -29,15 +29,18 @@ max_zoom_scale = 10.0
 def update_display():
     global img_display, zoom_scale, drag_offset_x, drag_offset_y
 
+    # Resize the image according to the zoom scale
     new_width = int(img.shape[1] * zoom_scale)
     new_height = int(img.shape[0] * zoom_scale)
     img_resized = cv2.resize(img, (new_width, new_height))
 
+    # Define the visible portion of the image
     x_start = max(0, min(drag_offset_x, new_width - image_width_px))
     y_start = max(0, min(drag_offset_y, new_height - image_height_px))
     x_end = x_start + image_width_px
     y_end = y_start + image_height_px
 
+    # Display the resized and cropped image
     img_display = img_resized[y_start:y_end, x_start:x_end]
     cv2.imshow('image', img_display)
 
@@ -77,20 +80,20 @@ def mouse_callback(event, x, y, flags, param):
             cv2.rectangle(img_display, (int(top_left_pt[0] * zoom_scale - drag_offset_x), int(top_left_pt[1] * zoom_scale - drag_offset_y)),
                           (int(bottom_right_pt[0] * zoom_scale - drag_offset_x), int(bottom_right_pt[1] * zoom_scale - drag_offset_y)), (0, 255, 0), 2)
 
-            # Seçilen alanın piksel boyutlarını hesapla
+            # Calculate the dimensions of the selected area in pixels
             width_px = abs(top_left_pt[0] - bottom_right_pt[0])
             height_px = abs(top_left_pt[1] - bottom_right_pt[1])
             
-            # Piksel boyutlarını milimetreye dönüştür
-            width_mm = width_px / px_per_mm_width*13
-            height_mm = height_px / px_per_mm_height*13
+            # Convert pixel dimensions to millimeters
+            width_mm = width_px / px_per_mm_width
+            height_mm = height_px / px_per_mm_height
             
-            # Sonuçları görüntü üzerinde göster
+            # Display the results on the image
             result_text = f"{width_mm:.2f} mm x {height_mm:.2f} mm"
             cv2.putText(img_display, result_text, (int(top_left_pt[0] * zoom_scale - drag_offset_x), int(top_left_pt[1] * zoom_scale - drag_offset_y) - 10), 
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             cv2.imshow('image', img_display)
-            print(f"Seçilen alanın boyutları: {width_mm:.2f} mm x {height_mm:.2f} mm")
+            print(f"Selected area dimensions: {width_mm:.2f} mm x {height_mm:.2f} mm")
 
     elif event == cv2.EVENT_MOUSEWHEEL:
         old_zoom_scale = zoom_scale
@@ -99,7 +102,7 @@ def mouse_callback(event, x, y, flags, param):
         else:
             zoom_scale = max(zoom_scale / 1.1, min_zoom_scale)
 
-        # Hesaplanan offset'i kullanarak görüntüyü zoom merkezine göre ayarla
+        # Adjust the image according to the zoom center
         center_x = (x + drag_offset_x) / old_zoom_scale
         center_y = (y + drag_offset_y) / old_zoom_scale
 
@@ -111,30 +114,30 @@ def mouse_callback(event, x, y, flags, param):
 
         update_display()
 
-# Tkinter'i kullanarak dosya seçici aç
-Tk().withdraw()  # Tkinter penceresini gizle
-image_path = askopenfilename(title="Bir görüntü dosyası seçin", filetypes=[("Image files", "*.jpg *.jpeg *.png *.bmp")])
+# Open file dialog using Tkinter
+Tk().withdraw()  # Hide the Tkinter window
+image_path = askopenfilename(title="Select an image file", filetypes=[("Image files", "*.jpg *.jpeg *.png *.bmp")])
 
-# Görüntünün mevcut olup olmadığını kontrol et
+# Check if the image exists
 if not os.path.isfile(image_path):
-    print(f"Görüntü dosyası bulunamadı: {image_path}")
+    print(f"Image file not found: {image_path}")
 else:
-    # Görüntüyü yükle
+    # Load the image
     img = cv2.imread(image_path)
 
-    # Görüntünün başarıyla yüklenip yüklenmediğini kontrol et
+    # Check if the image loaded successfully
     if img is None:
-        print(f"Görüntü dosyası açılamadı: {image_path}")
+        print(f"Image file could not be opened: {image_path}")
     else:
-        # Görüntüyü yeniden boyutlandır
+        # Resize the image
         img = cv2.resize(img, (image_width_px, image_height_px))
         img_display = img.copy()
 
-        # Pencere oluştur ve fare geri çağırma fonksiyonunu ayarla
+        # Create window and set mouse callback function
         cv2.namedWindow('image', cv2.WINDOW_NORMAL)
         cv2.setMouseCallback('image', mouse_callback)
 
-        # Görüntüyü göster
+        # Display the image
         update_display()
         cv2.waitKey(0)
         cv2.destroyAllWindows()
